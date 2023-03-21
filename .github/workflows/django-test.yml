@@ -1,4 +1,4 @@
-name: Django tests with Conda
+name: Django tests
 
 on:
   push:
@@ -10,18 +10,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    - name: Set up Conda environment
-      uses: conda-incubator/setup-miniconda@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
       with:
-        environment-file: env-his-dev.yaml
-
-    - name: Activate Conda environment
-      run: conda activate base
+        python-version: '3.10'
 
     - name: Install dependencies
-      run: conda env update --file env-his-dev.yaml
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
     - name: Run tests
       run: |
