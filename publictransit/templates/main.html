@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+<script src="{% static 'map.js' %}"></script>
+
+{% block content %}
+
+<!-- Load Leaflet from a CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" crossorigin="" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js" crossorigin=""></script>
+
+<script src="{% static 'map.js' %}"></script>
+
+<div id="map" style="height: 500px;"></div>
+
+<div>
+    <label for="lat-input">Latitude:</label>
+    <input type="text" id="lat-input">
+</div>
+
+<div>
+    <label for="lng-input">Longitude:</label>
+    <input type="text" id="lng-input">
+</div>
+
+<button id="search-button">Search</button>
+
+<p><span id="error-message"></span></p>
+
+{% endblock %}

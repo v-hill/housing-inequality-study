@@ -1,0 +1,66 @@
+.small_col {
+    width: 25%;
+    float: left;
+    background-color: #ddd;
+    height: 500px;
+    display: flex;
+    /* apply a flexbox layout to the div element */
+    flex-direction: column;
+    /* arrange the child elements in a vertical column */
+    /* set a height so the column is visible */
+}
+
+
+.small_col label {
+    display: inline-block;
+    /* display the label element as a block element */
+    margin-right: 10px;
+    /* add some margin to the right to create spacing between the label and input elements */
+    width: 100px;
+    /* set a fixed width for the label element */
+}
+
+.small_col input {
+    display: inline-block;
+    /* display the input element as a block element */
+    width: 200px;
+    /* set a fixed width for the input element */
+}
+
+.small_col_2 {
+    background-color: #c4c4c4;
+    /* override the background-color property */
+}
+
+
+/* set the width of the third column to 50% */
+.large_col {
+    width: 50%;
+    float: right;
+    background-color: #999;
+
+    height: 500px;
+    /* set a height so the column is visible */
+}
+
+/* clear the float property */
+.clearfix {
+    clear: both;
+}
+
+.message-box {
+    display: none;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 5px;
+}
+
+.error {
+    background-color: #F44336;
+    color: white;
+}
+
+.success {
+    background-color: #4CAF50;
+    color: white;
+}
