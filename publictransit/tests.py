@@ -3,6 +3,17 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 
+class MainViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("publictransit:main")
+
+    def test_main_view(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "main.html")
+
+
 class SearchViewTestCase(TestCase):
     def setUp(self):
         self.client = Client()

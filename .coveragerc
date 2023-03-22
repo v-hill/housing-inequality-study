@@ -1,0 +1,13 @@
+[run]
+omit =
+    */__init__.py
+    */admin.py
+    */asgi.py
+    */migrations/*
+    */settings.py
+    */tests.py
+    */wsgi.py
+    manage.py
+
+[report]
+fail_under = 80

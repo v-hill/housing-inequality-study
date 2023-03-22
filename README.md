@@ -1,8 +1,10 @@
 # housing-inequality-study
 
-# Setup
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/v-hill/housing-inequality-study/django-test.yml)
 
-### Python Environment
+## Setup
+
+### Step 1 - Python Environment
 
 Create a Conda python environment for this project by running:
 
