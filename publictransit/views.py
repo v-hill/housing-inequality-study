@@ -1,13 +1,41 @@
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 from rest_framework import status
 
 
-def main(request):
+def main(request: HttpRequest) -> HttpResponse:
+    """Render the 'main.html' template.
+
+    The main page displays a map with a latitude and longitude input. When the
+    'Search' button is pressed a marker is added to the map at that point and
+    the map recenters to that point.
+
+    Parameters
+    ----------
+    request : HttpRequest
+        The HTTP request object.
+
+    Returns
+    -------
+    HttpResponse
+        The HTTP response object with the rendered 'main.html' template.
+    """
     return render(request, "main.html")
 
 
-def second(request):
+def second(request: HttpRequest) -> HttpResponse:
+    """Render the 'second.html' template.
+
+    Parameters
+    ----------
+    request : HttpRequest
+        The HTTP request object.
+
+    Returns
+    -------
+    HttpResponse
+        The HTTP response object with the rendered 'second.html' template.
+    """
     return render(request, "second.html")
 
 
@@ -36,7 +64,7 @@ def search(request):
         (Bad Request) and the following format:
 
         {
-            "error": "Invalid lat or lng value."
+            "error": "Invalid latitude or longitude value."
         }
 
         Note that the error response is returned if either lat or lng value is
@@ -49,7 +77,7 @@ def search(request):
         lng = float(lng)
     except ValueError:
         return JsonResponse(
-            {"error": "Invalid lat or lng value."},
+            {"error": "Invalid latitude or longitude value."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     return JsonResponse({"lat": lat, "lng": lng})

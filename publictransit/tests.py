@@ -46,4 +46,6 @@ class SearchViewTestCase(TestCase):
 
         response_data = response.json()
         self.assertIn("error", response_data)
-        self.assertEqual(response_data["error"], "Invalid lat or lng value.")
+        self.assertEqual(
+            response_data["error"], "Invalid latitude or longitude value."
+        )
