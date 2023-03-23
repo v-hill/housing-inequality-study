@@ -1,6 +1,9 @@
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import render
+from django.views.decorators.http import require_http_methods
 from rest_framework import status
+
+from publictransit.models import MapBoundary
 
 
 def main(request: HttpRequest) -> HttpResponse:
@@ -81,3 +84,44 @@ def search(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     return JsonResponse({"lat": lat, "lng": lng})
+
+
+def add_map_boundary(request):
+    if request.method == "POST":
+        admin_level = request.POST.get("admin_level")
+        iso31662 = request.POST.get("iso31662")
+        name = request.POST.get("name")
+        osm_id = request.POST.get("osm_id")
+        ref_gss = request.POST.get("ref_gss")
+
+        # Do any necessary pre-processing here
+
+        map_boundary = MapBoundary(
+            admin_level=admin_level,
+            iso31662=iso31662,
+            name=name,
+            osm_id=osm_id,
+            ref_gss=ref_gss,
+        )
+        map_boundary.save()
+
+    return render(request, "map_boundary_form.html")
+
+
+def boundaries(request):
+    map_boundaries = MapBoundary.objects.all().values()
+    return JsonResponse(list(map_boundaries), safe=False)
+
+
+@require_http_methods(["DELETE"])
+def delete_card(request):
+    if request.method == "DELETE":
+        delete_data = QueryDict(request.body)
+        boundary_id = delete_data.get("boundary_id")
+        try:
+            boundary = MapBoundary.objects.get(id=boundary_id)
+            boundary.delete()
+        except:
+            pass
+        print("deleting")
+    return JsonResponse({}, safe=False)
