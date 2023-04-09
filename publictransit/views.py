@@ -1,9 +1,11 @@
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
 
 from publictransit.models import MapBoundary
+from publictransit.overpass_api import OverpassClient
 
 
 def main(request: HttpRequest) -> HttpResponse:
@@ -26,8 +28,10 @@ def main(request: HttpRequest) -> HttpResponse:
     return render(request, "main.html")
 
 
-def second(request: HttpRequest) -> HttpResponse:
-    """Render the 'second.html' template.
+def boundary_page(request: HttpRequest) -> HttpResponse:
+    """Render the 'boundary_page.html' template.
+
+    This template is used to add new search boundaries.
 
     Parameters
     ----------
@@ -37,9 +41,10 @@ def second(request: HttpRequest) -> HttpResponse:
     Returns
     -------
     HttpResponse
-        The HTTP response object with the rendered 'second.html' template.
+        The HTTP response object with the rendered
+        'boundary_page.html' template.
     """
-    return render(request, "second.html")
+    return render(request, "boundary_page.html")
 
 
 def search(request):
@@ -86,35 +91,95 @@ def search(request):
     return JsonResponse({"lat": lat, "lng": lng})
 
 
-def add_map_boundary(request):
-    if request.method == "POST":
-        admin_level = request.POST.get("admin_level")
-        iso31662 = request.POST.get("iso31662")
-        name = request.POST.get("name")
-        osm_id = request.POST.get("osm_id")
-        ref_gss = request.POST.get("ref_gss")
-
-        # Do any necessary pre-processing here
-
-        map_boundary = MapBoundary(
-            admin_level=admin_level,
-            iso31662=iso31662,
-            name=name,
-            osm_id=osm_id,
-            ref_gss=ref_gss,
-        )
-        map_boundary.save()
-
-    return render(request, "map_boundary_form.html")
-
-
-def boundaries(request):
+def list_boundaries(request):
     map_boundaries = MapBoundary.objects.all().values()
     return JsonResponse(list(map_boundaries), safe=False)
 
 
+@csrf_exempt
+def check_boundary(request):
+    if request.method == "GET":
+        area_standard = request.GET.get("area_standard")
+        area_value = request.GET.get("area_value")
+        if not area_standard or not area_value:
+            return JsonResponse({"error": "Value field is required"})
+        elif area_standard == "Ref GSS":
+            json_response = process_check_boundary_request(
+                area_value, "Ref GSS"
+            )
+        elif area_standard == "ISO 3166-2":
+            json_response = process_check_boundary_request(
+                area_value, "ISO 3166-2"
+            )
+        return json_response
+
+
+def process_check_boundary_request(area_value, test_area_standard):
+    area_standard_map = {"ISO 3166-2": "ISO3166-2", "Ref GSS": "ref:gss"}
+    query = (
+        '[out:csv(::type,::id,"name")];\n'
+        'area[name="England"]->.a;\n'
+        f'rel(area.a)["{area_standard_map[test_area_standard]}"="{area_value}"];\n'
+        "out;"
+    )
+    client = OverpassClient()
+    response = client.get(query)
+    if len(response) > 1:
+        data = response[1]
+        osm_id = data[1]
+        name = data[2]
+        success_text = (
+            "Found relation: "
+            f"<a href='https://www.openstreetmap.org/relation/{osm_id}'>{name}</a>"
+        )
+        json_response = JsonResponse(
+            {"success": (success_text), "osm_id": osm_id}
+        )
+    else:
+        json_response = JsonResponse(
+            {
+                "error": (
+                    f"No boundary with {test_area_standard} value"
+                    f" '{area_value}' on OpenStreetMap"
+                )
+            }
+        )
+    return json_response
+
+
+@csrf_exempt
+def add_boundary(request):
+    if request.method == "POST":
+        osm_id = request.POST.get("osm_id")
+        if osm_id:
+            query = f"[out:json];\nrelation({osm_id});\nout tags;"
+            client = OverpassClient()
+            response = client.get(query)
+            tags = response["elements"][0]["tags"]
+            admin_level = tags["admin_level"]
+            iso31662 = tags["ISO3166-2"]
+            name = tags["name"]
+            ref_gss = tags["ref:gss"]
+            map_boundary, created = MapBoundary.objects.get_or_create(
+                admin_level=admin_level,
+                iso31662=iso31662,
+                name=name,
+                osm_id=osm_id,
+                ref_gss=ref_gss,
+            )
+            return JsonResponse({"status": "success", "name": name})
+        else:
+            return JsonResponse(
+                {"status": "error", "message": "osm_id is missing"}
+            )
+    else:
+        return JsonResponse(
+            {"status": "error", "message": "Only POST requests are allowed"}
+        )
+
+
 @require_http_methods(["DELETE"])
-def delete_card(request):
+def delete_boundary(request):
     if request.method == "DELETE":
         delete_data = QueryDict(request.body)
         boundary_id = delete_data.get("boundary_id")

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<script src="{% static 'boundary.js' %}"></script>
+
+
+<style>
+    form {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    input {
+        margin-bottom: 0.5em;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
+<div class="container mt-4">
+    {% csrf_token %}
+    <h2>Add Map Boundary</h2>
+
+    <p>A <b>Ref GSS code</b> is a set of letters and numbers used by the UK's Office for National Statistics to identify
+        geographical areas for statistical purposes. These codes are used to distinguish between different levels of
+        geographic areas, such as regions, local authorities, and electoral wards.</p>
+
+    <p>An <b>ISO 3166-2</b> code is a standardized code used to identify the administrative subdivisions of the country.
+        The
+        code consists of the country code "GB" (for United Kingdom) followed by a hyphen and a code for the subdivision,
+        such as "ISL" for the London Borough of Islington or "LDN" for the City of London.</p>
+
+    <form id="area-form">
+        <div class="form-group">
+            <label for="area-standard">Area code standard</label>
+            <select class="form-control" id="area-standard" onchange="updatePlaceholder()">
+                <option>ISO 3166-2</option>
+                <option>Ref GSS</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="area-value">Value</label>
+            <input class="form-control" id="area-value" placeholder="GB-LND">
+        </div>
+    </form>
+    <div class="button-container">
+        <button id="check_exists" class="btn btn-primary">Check Area Exists</button>
+        <button id="add_boundary" class="btn btn-success hidden">Add Boundary</button>
+    </div>
+    <div>
+        <label for="response-text">Response</label>
+        <div class="form-control" id="response-text" contenteditable="false">
+           Select an area code standard and enter a value to check if it exists
+        </div>
+    </div>
+
+
+</div>
+
+
+<div class="container mt-4">
+    <h2>Existing Boundaries</h2>
+
+    <div class="row" id="card-container"></div>
+</div>
+
+{% endblock %}

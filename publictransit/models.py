@@ -8,10 +8,10 @@ class Location(models.Model):
 
 class MapBoundary(models.Model):
     admin_level = models.IntegerField()
-    iso31662 = models.CharField(max_length=128, blank=True, null=True)
+    iso31662 = models.CharField(max_length=128)
     name = models.CharField(max_length=128)
     osm_id = models.IntegerField()  # Openstreetmap ID
-    ref_gss = models.CharField(max_length=128, blank=True, null=True)
+    ref_gss = models.CharField(max_length=128)
 
     def __str__(self) -> str:
         return self.name

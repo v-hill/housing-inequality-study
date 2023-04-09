@@ -8,4 +8,4 @@
 
 Create a Conda python environment for this project by running:
 
-```conda env create --file=env-his.yaml```
+```conda env create --file=environment.yml```
