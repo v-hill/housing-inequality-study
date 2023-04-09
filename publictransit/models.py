@@ -30,7 +30,8 @@ class MapBoundary(models.Model):
     def stations_list_query(self):
         query = f"""[out:csv(name, ::id, ::lat, ::lon)][timeout:25];
                     area["ref:gss"="{self.ref_gss}"]->.map_region;
-                    (node["railway"="station"]["name"](area.map_region););
+                    (node["railway"="station"]
+                    ["usage"!="tourism"]["name"](area.map_region););
                     (._;>;);
                     out;"""
         return query

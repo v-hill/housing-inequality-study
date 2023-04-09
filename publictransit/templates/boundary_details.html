@@ -1,50 +1,30 @@
-{% extends "base.html" %}
+{% extends "boundary_template.html" %}
 {% load static %}
-{% block content %}
-
+{% block main-content %}
 <script src="{% static 'boundary_details.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
 
 
-<style>
-    .col-main-content {
-        background-color: #f1f1f1;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        margin-top: 1rem;
-    }
-</style>
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-2 col-left order-md-1">
-            <!-- Left sidebar here -->
-        </div>
-        <div class="col-md-7 col-main order-md-2">
-            <!-- Main content here -->
-            <div class="col-main-content">
-                <h1>{{ boundary.name }}</h1>
-            </div>
-            <div class="col-main-content">
-                <p>Admin Level: {{ boundary.admin_level }}</p>
-                <p>ISO 3166-2: {{ boundary.iso31662 }}</p>
-                <p>Openstreetmap ID: {{ boundary.osm_id }}</p>
-                <p>Ref GSS: {{ boundary.ref_gss }}</p>
-                <a href="https://www.openstreetmap.org/relation/{{ boundary.osm_id }}" target="_blank"
-                    class="btn btn-primary">View on OpenStreetMap</a>
-            </div>
-            <div class="col-main-content">
-                <a href='{% url "publictransit:train_stations" boundary_id=boundary.id %}' class="btn btn-primary"
-                    id="view-all-stations-btn">View all stations</a>
-            </div>
-            <div class="col-main-content">
-                <a href='{% url "publictransit:boundary_overview" %}' class="btn btn-primary">Back to Index</a>
-            </div>
-        </div>
-        <div class="col-md-3 col-right order-md-3">
-            <!-- Right sidebar here -->
-        </div>
-    </div>
+<div class="col-main-content">
+    <h1>{{ boundary.name }}</h1>
 </div>
+<div class="col-main-content">
+    <p>Admin Level: {{ boundary.admin_level }}</p>
+    <p>ISO 3166-2: {{ boundary.iso31662 }}</p>
+    <p>Openstreetmap ID: {{ boundary.osm_id }}</p>
+    <p>Ref GSS: {{ boundary.ref_gss }}</p>
+    <a href="https://www.openstreetmap.org/relation/{{ boundary.osm_id }}" target="_blank" class="btn btn-primary">View
+        on OpenStreetMap</a>
+</div>
+<div class="col-main-content">
+    <h2>Railway stations</h2>
+    <div id="train-station-list"></div>
+    <button class="btn btn-primary" id="get-all-stations-btn">Get all stations data</button>
+</div>
+<div class="col-main-content">
+    <a href='{% url "publictransit:boundary_overview" %}' class="btn btn-success">Back to Index</a>
+</div>
+
 
 
 {% endblock %}

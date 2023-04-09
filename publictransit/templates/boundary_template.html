@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 col-left order-md-1">
+            <!-- Left sidebar here -->
+        </div>
+        <div class="col-md-7 col-main order-md-2">
+            <!-- Main content here -->
+            {% block main-content %}
+            {% endblock %}
+        </div>
+        <div class="col-md-3 col-right order-md-3">
+            <!-- Right sidebar here -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}

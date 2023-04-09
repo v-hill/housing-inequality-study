@@ -1,34 +1,12 @@
-{% extends "base.html" %}
+{% extends "boundary_template.html" %}
 {% load static %}
-{% block content %}
-
+{% block main-content %}
 <script src="{% static 'boundary_overview.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
 
-
-<style>
-    form {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    input {
-        margin-bottom: 0.5em;
-    }
-
-    .button-container {
-        display: flex;
-        justify-content: space-between;
-    }
-
-    .hidden {
-        display: none;
-    }
-</style>
-
-<div class="container mt-4">
+<div class="col-main-content">
     {% csrf_token %}
-    <h2>Add Map Boundary</h2>
+    <h2>Add new map boundary</h2>
 
     <p>A <b>Ref GSS code</b> is a set of letters and numbers used by the UK's Office for National Statistics to identify
         geographical areas for statistical purposes. These codes are used to distinguish between different levels of
@@ -64,11 +42,10 @@
     </div>
 </div>
 
-<div class="container mt-4">
+<div class="col-main-content">
     <h2>Boundaries</h2>
 
     <div class="row" id="card-container"></div>
 </div>
-
 
 {% endblock %}

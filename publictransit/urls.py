@@ -9,14 +9,14 @@ urlpatterns = [
         "boundary_overview", views.boundary_overview, name="boundary_overview"
     ),
     path(
+        "boundary/<int:boundary_id>/train_stations",
+        views.fetch_and_save_stations,
+        name="train_stations",
+    ),
+    path(
         "boundary/<int:boundary_id>/",
         views.boundary_details,
         name="boundary_details",
-    ),
-    path(
-        "train_stations/<int:boundary_id>/",
-        views.boundary_details,
-        name="train_stations",
     ),
     path("check_boundary", views.check_boundary, name="check_boundary"),
     path("delete_boundary", views.delete_boundary, name="delete_boundary"),

@@ -1,10 +1,12 @@
+import json
+
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
 
-from publictransit.models import MapBoundary
+from publictransit import models
 from publictransit.overpass_api import OverpassClient
 
 
@@ -92,7 +94,7 @@ def search(request):
 
 
 def list_boundaries(request):
-    map_boundaries = MapBoundary.objects.all().values()
+    map_boundaries = models.MapBoundary.objects.all().values()
     return JsonResponse(list(map_boundaries), safe=False)
 
 
@@ -129,8 +131,9 @@ def process_check_boundary_request(area_value, test_area_standard):
         osm_id = data[1]
         name = data[2]
         success_text = (
-            "Found relation: "
-            f"<a href='https://www.openstreetmap.org/relation/{osm_id}'>{name}</a>"
+            "Found relation: <a"
+            f" href='https://www.openstreetmap.org/relation/{osm_id}'"
+            f" target='_blank'>{name}</a>"
         )
         json_response = JsonResponse(
             {"success": (success_text), "osm_id": osm_id}
@@ -160,7 +163,7 @@ def add_boundary(request):
             iso31662 = tags["ISO3166-2"]
             name = tags["name"]
             ref_gss = tags["ref:gss"]
-            map_boundary, created = MapBoundary.objects.get_or_create(
+            map_boundary, created = models.MapBoundary.objects.get_or_create(
                 admin_level=admin_level,
                 iso31662=iso31662,
                 name=name,
@@ -184,7 +187,7 @@ def delete_boundary(request):
         delete_data = QueryDict(request.body)
         boundary_id = delete_data.get("boundary_id")
         try:
-            boundary = MapBoundary.objects.get(id=boundary_id)
+            boundary = models.MapBoundary.objects.get(id=boundary_id)
             boundary.delete()
         except:
             pass
@@ -193,14 +196,14 @@ def delete_boundary(request):
 
 
 def boundary_details(request, boundary_id):
-    boundary = get_object_or_404(MapBoundary, pk=boundary_id)
+    boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
     return render(request, "boundary_details.html", {"boundary": boundary})
 
 
 def get_osm_url(request):
     if request.method == "GET" and "osm_id" in request.GET:
         osm_id = request.GET["osm_id"]
-        boundary = MapBoundary.objects.get(osm_id=osm_id)
+        boundary = models.MapBoundary.objects.get(osm_id=osm_id)
         url = boundary.url
         print(url)
         return JsonResponse({"url": url})
@@ -210,7 +213,110 @@ def get_osm_url(request):
         )
 
 
+@csrf_exempt
 def train_stations(request, boundary_id):
-    boundary = get_object_or_404(MapBoundary, pk=boundary_id)
-    print(boundary.stations_list_query)
-    return render(request, "train_stations.html", {"boundary": boundary})
+    """Get info for train stations inside of a boundary.
+
+    This Django view retrieves data about train stations within a specified
+    boundary using the OpenStreetMap Overpass API. The data is fetched via POST
+    request and returned as a JSON response with a sorted list of train
+    stations by name.
+
+    Parameters
+    ----------
+    request : HttpRequest
+        The incoming HTTP request containing method type (POST).
+    boundary_id : int
+        The primary key (ID) of the MapBoundary instance to fetch train
+        stations data for.
+
+    Returns
+    -------
+    JsonResponse
+        A JsonResponse object containing either the list of train stations
+        sorted by name or an error message if the request method is invalid or
+        a required parameter is missing.
+    """
+    if request.method == "POST":
+        boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
+        client = OverpassClient()
+        response = client.get(boundary.stations_list_query)
+
+        # Sort each list (excluding header) by name in ascending order
+        sorted_stations = sorted(response[1:], key=lambda x: x[0])
+        return JsonResponse({"stations": sorted_stations})
+    else:
+        return JsonResponse(
+            {"error": "Invalid request method or missing parameter."}
+        )
+
+
+@csrf_exempt
+def fetch_and_save_stations(request, boundary_id):
+    """Download station data if needed, else return stations from database.
+
+    Checks if there are any stations in the Station model for a given boundary.
+    If no stations are found, it calls the train_stations method to get the
+    stations data from the API and saves the records into the Station model.
+
+    Parameters
+    ----------
+    request : HttpRequest
+        The incoming HTTP request containing method type (POST).
+    boundary_id : int
+        The primary key (ID) of the MapBoundary instance to fetch train
+        stations data for.
+
+    Returns
+    -------
+    JsonResponse
+        A JsonResponse object containing either the list of train stations
+        saved in the Station model or an error message if the request method is
+        invalid or a required parameter is missing.
+    """
+    if request.method == "POST":
+        stations = models.Station.objects.filter(boundary_id=boundary_id)
+
+        if not stations.exists():
+            # Get stations data from API
+            station_response = train_stations(request, boundary_id)
+            stations_data = json.loads(station_response.content).get(
+                "stations", []
+            )
+
+            # Save stations data in Station model
+            for station in stations_data:
+                name, osm_id, lat, lon = station
+                location = models.Location.objects.create(
+                    latitude=float(lat), longitude=float(lon)
+                )
+                boundary = models.MapBoundary.objects.get(pk=boundary_id)
+
+                models.Station.objects.create(
+                    boundary=boundary,
+                    location=location,
+                    name=name,
+                    osm_id=int(osm_id),
+                )
+
+            stations = models.Station.objects.filter(boundary_id=boundary_id)
+
+        # Serialize stations data
+        stations_data = [
+            {
+                "name": station.name,
+                "osm_id": station.osm_id,
+                "location": {
+                    "latitude": station.location.latitude,
+                    "longitude": station.location.longitude,
+                },
+            }
+            for station in stations
+        ]
+
+        return JsonResponse({"stations": stations_data})
+
+    else:
+        return JsonResponse(
+            {"error": "Invalid request method or missing parameter."}
+        )

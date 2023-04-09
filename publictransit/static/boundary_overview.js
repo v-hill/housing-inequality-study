@@ -57,8 +57,8 @@ function createCards(data) {
 // Function to create cards from the data
 function updateCards(createCards) {
     $.ajax({
-        type: 'GET',
         url: 'list_boundaries',
+        type: 'GET',
         success: function (data) {
             // Assign the returned data to a variable
             var mapBoundaries = data;

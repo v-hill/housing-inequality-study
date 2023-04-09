@@ -26,8 +26,8 @@ $(document).ready(function () {
 
         // make an AJAX request to the search endpoint
         $.ajax({
-            type: 'GET',
             url: 'search',
+            type: 'GET',
             data: { 'lat': lat, 'lng': lng },
             beforeSend: function () {
                 // Clear any existing error message
