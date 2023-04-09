@@ -2,7 +2,7 @@
 {% load static %}
 {% block content %}
 
-<script src="{% static 'boundary.js' %}"></script>
+<script src="{% static 'boundary_overview.js' %}"></script>
 
 
 <style>
@@ -25,6 +25,7 @@
         display: none;
     }
 </style>
+
 <div class="container mt-4">
     {% csrf_token %}
     <h2>Add Map Boundary</h2>
@@ -58,18 +59,16 @@
     <div>
         <label for="response-text">Response</label>
         <div class="form-control" id="response-text" contenteditable="false">
-           Select an area code standard and enter a value to check if it exists
+            Select an area code standard and enter a value to check if it exists
         </div>
     </div>
-
-
 </div>
 
-
 <div class="container mt-4">
-    <h2>Existing Boundaries</h2>
+    <h2>Boundaries</h2>
 
     <div class="row" id="card-container"></div>
 </div>
+
 
 {% endblock %}

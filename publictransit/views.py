@@ -1,5 +1,5 @@
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
@@ -28,8 +28,8 @@ def main(request: HttpRequest) -> HttpResponse:
     return render(request, "main.html")
 
 
-def boundary_page(request: HttpRequest) -> HttpResponse:
-    """Render the 'boundary_page.html' template.
+def boundary_overview(request: HttpRequest) -> HttpResponse:
+    """Render the 'boundary_overview.html' template.
 
     This template is used to add new search boundaries.
 
@@ -42,9 +42,9 @@ def boundary_page(request: HttpRequest) -> HttpResponse:
     -------
     HttpResponse
         The HTTP response object with the rendered
-        'boundary_page.html' template.
+        'boundary_overview.html' template.
     """
-    return render(request, "boundary_page.html")
+    return render(request, "boundary_overview.html")
 
 
 def search(request):
@@ -190,3 +190,27 @@ def delete_boundary(request):
             pass
         print("deleting")
     return JsonResponse({}, safe=False)
+
+
+def boundary_details(request, boundary_id):
+    boundary = get_object_or_404(MapBoundary, pk=boundary_id)
+    return render(request, "boundary_details.html", {"boundary": boundary})
+
+
+def get_osm_url(request):
+    if request.method == "GET" and "osm_id" in request.GET:
+        osm_id = request.GET["osm_id"]
+        boundary = MapBoundary.objects.get(osm_id=osm_id)
+        url = boundary.url
+        print(url)
+        return JsonResponse({"url": url})
+    else:
+        return JsonResponse(
+            {"error": "Invalid request method or missing parameter."}
+        )
+
+
+def train_stations(request, boundary_id):
+    boundary = get_object_or_404(MapBoundary, pk=boundary_id)
+    print(boundary.stations_list_query)
+    return render(request, "train_stations.html", {"boundary": boundary})

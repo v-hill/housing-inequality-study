@@ -26,6 +26,15 @@ class MapBoundary(models.Model):
         url = f"https://www.openstreetmap.org/relation/{self.osm_id}"
         return url
 
+    @property
+    def stations_list_query(self):
+        query = f"""[out:csv(name, ::id, ::lat, ::lon)][timeout:25];
+                    area["ref:gss"="{self.ref_gss}"]->.map_region;
+                    (node["railway"="station"]["name"](area.map_region););
+                    (._;>;);
+                    out;"""
+        return query
+
 
 class Station(models.Model):
     boundary = models.ForeignKey(MapBoundary, on_delete=models.CASCADE)

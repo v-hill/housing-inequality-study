@@ -31,20 +31,20 @@ $(document).ready(function () {
 });
 
 
+
 function createCards(data) {
     var cards = '';
     for (var i = 0; i < data.length; i++) {
-        cards += "<div class='card'><div class='card-body'><h5 class='card-title'>"
-            + data[i].name + "</h5><p class='card-text'>Admin Level: "
-            + data[i].admin_level + "</p><p class='card-text'>ISO 3166-2: "
-            + data[i].iso31662
-            + "</p><p class='card-text'>Openstreetmap ID: "
-            + data[i].osm_id
-            + "</p><p class='card-text'>Ref GSS: "
-            + data[i].ref_gss + "</p></div></div>"
-            + "<button class='delete-card btn btn-danger' data-id='"
-            + data[i].id
-            + "'>Delete</button>";
+        cards += `<div class='card'>
+        <div class='card-body'>
+            <h5 class='card-title'>${data[i].name}</h5>
+            <p class='card-text'>Admin Level: ${data[i].admin_level}</p>
+            <p class='card-text'>ISO 3166-2: ${data[i].iso31662}</p>
+            <p class='card-text'>Ref GSS: ${data[i].ref_gss}</p>
+            <a href='/publictransit/boundary/${data[i].id}/' class='btn btn-primary'>View Details</a>
+            <button class='delete-card btn btn-danger' data-id='${data[i].id}'>Delete</button>
+        </div>
+      </div>`;
     }
 
     // Update the card container
