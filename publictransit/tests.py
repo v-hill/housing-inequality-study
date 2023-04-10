@@ -1,58 +1,12 @@
-import pandas as pd
-from django.http import JsonResponse
-from django.test import Client, TestCase
-from django.urls import reverse
+import json
+from unittest.mock import patch
 
+from django.test import TestCase
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from publictransit import views
 from publictransit.overpass_api import OverpassClient
-from publictransit.station_data import GetStationData
-
-
-class MainViewTest(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.url = reverse("publictransit:main")
-
-    def test_main_view(self):
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "main.html")
-
-
-class SearchViewTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-
-    def test_search_view_ajax_request(self):
-        url = reverse("publictransit:search")
-        data = {"lat": "51.50129", "lng": "-0.14182"}
-
-        response = self.client.get(
-            url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response, JsonResponse)
-
-        response_data = response.json()
-        self.assertIn("lat", response_data)
-        self.assertIn("lng", response_data)
-        self.assertEqual(response_data["lat"], 51.50129)
-        self.assertEqual(response_data["lng"], -0.14182)
-
-    def test_search_view_invalid_input(self):
-        url = reverse("publictransit:search")
-        data = {"lat": "invalid", "lng": "-0.14182"}
-
-        response = self.client.get(
-            url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest"
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIsInstance(response, JsonResponse)
-
-        response_data = response.json()
-        self.assertIn("error", response_data)
-        self.assertEqual(
-            response_data["error"], "Invalid latitude or longitude value."
-        )
 
 
 class TestMyOverpassClient(TestCase):
@@ -88,48 +42,36 @@ class TestMyOverpassClient(TestCase):
         self.assertIn("Victoria Memorial", response)
 
 
-class TestGetStationData(TestCase):
+class CheckBoundaryViewTestCase(APITestCase):
     def setUp(self):
-        self.get_station_data = GetStationData()
-        # City of London (17 stations in total)
-        # see: https://www.openstreetmap.org/relation/51800
-        self.map_region = (
-            'area["ref:gss"="E09000001"][admin_level=6]->.region;'
-        )
-        self.expected_df = pd.DataFrame(
-            [
-                {
-                    "osm_id": 18395696,
-                    "latitude": 51.5118924,
-                    "longitude": -0.0952228,
-                    "name": "Mansion House",
-                },
-                {
-                    "osm_id": 1637578440,
-                    "latitude": 51.5131048,
-                    "longitude": -0.0893749,
-                    "name": "Bank",
-                },
-            ]
+        self.url = "/publictransit/check_boundary/"
+
+    # Mock the process_check_boundary_request method to avoid making an
+    # actual API call
+    @patch.object(views.CheckBoundaryView, "process_check_boundary_request")
+    def test_check_boundary_view_get(
+        self, mock_process_check_boundary_request
+    ):
+        test_data = {
+            "success": (
+                "Found relation: <a"
+                " href='https://www.openstreetmap.org/relation/51800'"
+                " target='_blank'>City of London</a>"
+            ),
+            "osm_id": 51800,
+        }
+        mock_process_check_boundary_request.return_value = test_data
+
+        response = self.client.get(
+            self.url, {"area_standard": "ISO 3166-2", "area_value": "GB-LND"}
         )
 
-    def test_generate_query(self):
-        self.assertIsInstance(
-            self.get_station_data._generate_query(self.map_region), str
-        )
+        # Check if the response status is HTTP 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_get_railway_station_data(self):
-        actual_df = self.get_station_data.get_railway_station_data(
-            self.map_region
-        )
-        actual_df = actual_df.iloc[:2]
-        pd.testing.assert_frame_equal(self.expected_df, actual_df)
+        # Deserialize the response content from bytes to a dictionary object
+        response_data = json.loads(response.content)
 
-    def test_csv_response_to_df(self):
-        input_list = [
-            ["@id|@lat|@lon|name"],
-            ["18395696|51.5118924|-0.0952228|Mansion House"],
-            ["1637578440|51.5131048|-0.0893749|Bank"],
-        ]
-        actual_df = self.get_station_data._csv_response_to_df(input_list)
-        pd.testing.assert_frame_equal(self.expected_df, actual_df)
+        # Compare the response_data dictionary with the expected test_data
+        # dictionary
+        self.assertEqual(response_data, test_data)

@@ -20,3 +20,12 @@
 
 # Analysis App
  - Graphs to study correlations between housing and census/map data
+
+
+# Add more tests!
+
+```coverage run --source='.' manage.py test```
+
+```coverage report```
+
+```coverage html```

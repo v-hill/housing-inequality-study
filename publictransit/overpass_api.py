@@ -103,3 +103,14 @@ class OverpassClient:
             elif content_type == "application/json":
                 response = json.loads(response.text)
         return response
+
+
+def get_boundary_check_query(area_value, test_area_standard):
+    area_dict = {"ISO 3166-2": "ISO3166-2", "Ref GSS": "ref:gss"}
+    query = (
+        '[out:csv(::type,::id,"name")];\n'
+        'area[name="England"]->.a;\n'
+        f'rel(area.a)["{area_dict[test_area_standard]}"="{area_value}"];\n'
+        "out;"
+    )
+    return query

@@ -1,10 +1,12 @@
 {% extends "boundary_template.html" %}
 {% load static %}
 {% block main-content %}
+
 <script src="{% static 'boundary_details.js' %}"></script>
 <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
 
-
+<input type="hidden" id="hidden-boundary-id" value="">
+{% csrf_token %}
 <div class="col-main-content">
     <h1>{{ boundary.name }}</h1>
 </div>
@@ -34,14 +36,14 @@
             </div>
         </div>
     </div>
-    <button id="stations-map-btn" class="btn btn-primary">View on OpenStreetMap</button>
+    <button id="stations-map-btn" class="btn btn-primary"
+        onclick="window.location.href='/publictransit/stations_map?boundary_id={{ boundary.id }}'">View on Map</button>
     <button id="remove-stations-btn" class="btn btn-danger">Remove Stations Data</button>
     <button id="download-stations-btn" class="btn btn-primary">Download Stations Data</button>
 </div>
 <div class="col-main-content">
-    <a href='{% url "publictransit:boundary_overview" %}' class="btn btn-success">Back to Index</a>
+    <a href='{% url "publictransit:boundary_overview" %}' class="btn btn-success">Back to Overview</a>
 </div>
-
 
 
 {% endblock %}

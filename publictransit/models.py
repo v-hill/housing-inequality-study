@@ -5,6 +5,9 @@ class Location(models.Model):
     latitude = models.DecimalField(max_digits=7, decimal_places=5)
     longitude = models.DecimalField(max_digits=7, decimal_places=5)
 
+    def __str__(self) -> str:
+        return f"{self.latitude:0.3f}, {self.longitude:0.3f}"
+
 
 class MapBoundary(models.Model):
     admin_level = models.IntegerField()
@@ -19,6 +22,7 @@ class MapBoundary(models.Model):
     class Meta:
         """Metadata options."""
 
+        verbose_name_plural = "MapBoundaries"
         unique_together = ("osm_id",)
 
     @property
@@ -36,12 +40,23 @@ class MapBoundary(models.Model):
                     out;"""
         return query
 
+    @property
+    def stations_list_query_outside_boundary(self, radius=2000):
+        query = f"""[out:csv(name, ::id, ::lat, ::lon)][timeout:25];
+                    rel["ref:gss"="{self.ref_gss}"]->.boundary;
+                    node(around.boundary:{radius})[railway]["railway"="station"]
+                    ["usage"!="tourism"]["name"]->.stations;
+                    (.stations;);
+                    out;"""
+        return query
+
 
 class Station(models.Model):
     boundary = models.ForeignKey(MapBoundary, on_delete=models.CASCADE)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
     name = models.CharField(max_length=128)
     osm_id = models.IntegerField()
+    isin_boundary = models.BooleanField(default=True)
 
     def __str__(self) -> str:
         return self.name

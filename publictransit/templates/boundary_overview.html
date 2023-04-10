@@ -4,8 +4,8 @@
 <script src="{% static 'boundary_overview.js' %}"></script>
 <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
 
+{% csrf_token %}
 <div class="col-main-content">
-    {% csrf_token %}
     <h2>Add new map boundary</h2>
 
     <p>A <b>Ref GSS code</b> is a set of letters and numbers used by the UK's Office for National Statistics to identify
