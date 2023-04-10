@@ -18,7 +18,23 @@
 </div>
 <div class="col-main-content">
     <h2>Railway stations</h2>
-    <div id="train-station-list"></div>
+    <p id="stations-summary">There are 0 stations in the database for this area.</p>
+    <div class="accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                    Click to expand/collapse
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne">
+                <div class="accordion-body">
+                    <div id="train-station-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button id="stations-map-btn" class="btn btn-primary">View on OpenStreetMap</button>
     <button id="remove-stations-btn" class="btn btn-danger">Remove Stations Data</button>
     <button id="download-stations-btn" class="btn btn-primary">Download Stations Data</button>
 </div>

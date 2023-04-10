@@ -337,11 +337,15 @@ def download_stations_data(request, boundary_id):
 
 
 @csrf_exempt
-def stations_data_exists(request, boundary_id):
-    if request.method == "POST":
+def stations_in_db(request, boundary_id):
+    if request.method == "GET":
         stations_data = serialise_stations_data(boundary_id)
         return JsonResponse({"stations": stations_data})
     else:
         return JsonResponse(
             {"error": "Invalid request method or missing parameter."}
         )
+
+
+def stations_map(request):
+    return render(request, "stations_map.html")

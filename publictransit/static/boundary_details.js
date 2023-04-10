@@ -1,4 +1,9 @@
 $(document).ready(function () {
+    function updateStationSummaryText(data) {
+        var num_stations = data.stations.length;
+        $("#stations-summary").text("There are " + num_stations + " stations in the database for this area.");
+    }
+
     function updateStationsTable(data) {
         var stations = data.stations;
         let stationList = '<table class="table table-sm">';
@@ -21,8 +26,10 @@ $(document).ready(function () {
             url: 'remove_stations',
             type: 'POST',
             success: function (data) {
+                updateStationSummaryText(data);
                 // Hide the remove-stations-btn and train-station-list
                 $("#remove-stations-btn").hide();
+                $("#stations-map-btn").hide();
                 $("#train-station-list").hide();
 
                 // Show the download-stations-btn
@@ -39,11 +46,13 @@ $(document).ready(function () {
             url: 'download_stations_data',
             type: 'POST',
             success: function (data) {
+                updateStationSummaryText(data);
                 // Update the stations table, if needed
                 updateStationsTable(data);
 
                 // Show the remove-stations-btn and train-station-list
                 $("#remove-stations-btn").show();
+                $("#stations-map-btn").show();
                 $("#train-station-list").show();
 
                 // Hide the download-stations-btn
@@ -56,15 +65,18 @@ $(document).ready(function () {
     });
 
     $.ajax({
-        url: 'stations_data_exists',
-        type: 'POST',
+        url: 'stations_in_db',
+        type: 'GET',
         success: function (data) {
             if (data.stations && data.stations.length > 0) {
+                updateStationSummaryText(data);
                 updateStationsTable(data);
                 $("#download-stations-btn").hide();
                 $("#remove-stations-btn").show();
+                $("#stations-map-btn").show();
             } else {
                 $("#remove-stations-btn").hide();
+                $("#stations-map-btn").hide();
                 $("#download-stations-btn").show();
             }
         },
