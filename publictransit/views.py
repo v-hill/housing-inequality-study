@@ -116,14 +116,19 @@ def check_boundary(request):
         return json_response
 
 
-def process_check_boundary_request(area_value, test_area_standard):
-    area_standard_map = {"ISO 3166-2": "ISO3166-2", "Ref GSS": "ref:gss"}
+def get_boundary_check_query(area_value, test_area_standard):
+    area_dict = {"ISO 3166-2": "ISO3166-2", "Ref GSS": "ref:gss"}
     query = (
         '[out:csv(::type,::id,"name")];\n'
         'area[name="England"]->.a;\n'
-        f'rel(area.a)["{area_standard_map[test_area_standard]}"="{area_value}"];\n'
+        f'rel(area.a)["{area_dict[test_area_standard]}"="{area_value}"];\n'
         "out;"
     )
+    return query
+
+
+def process_check_boundary_request(area_value, test_area_standard):
+    query = get_boundary_check_query(area_value, test_area_standard)
     client = OverpassClient()
     response = client.get(query)
     if len(response) > 1:
@@ -139,14 +144,13 @@ def process_check_boundary_request(area_value, test_area_standard):
             {"success": (success_text), "osm_id": osm_id}
         )
     else:
-        json_response = JsonResponse(
-            {
-                "error": (
-                    f"No boundary with {test_area_standard} value"
-                    f" '{area_value}' on OpenStreetMap"
-                )
-            }
-        )
+        no_boundary_response = {
+            "error": (
+                f"No boundary with {test_area_standard} value"
+                f" '{area_value}' on OpenStreetMap"
+            )
+        }
+        json_response = JsonResponse(no_boundary_response)
     return json_response
 
 
@@ -214,7 +218,7 @@ def get_osm_url(request):
 
 
 @csrf_exempt
-def train_stations(request, boundary_id):
+def get_station_data(request, boundary_id):
     """Get info for train stations inside of a boundary.
 
     This Django view retrieves data about train stations within a specified
@@ -251,13 +255,11 @@ def train_stations(request, boundary_id):
         )
 
 
-@csrf_exempt
 def fetch_and_save_stations(request, boundary_id):
     """Download station data if needed, else return stations from database.
 
-    Checks if there are any stations in the Station model for a given boundary.
-    If no stations are found, it calls the train_stations method to get the
-    stations data from the API and saves the records into the Station model.
+    Call the get_station_data method to get the stations data from the API and
+    save the records into the Station model.
 
     Parameters
     ----------
@@ -275,47 +277,70 @@ def fetch_and_save_stations(request, boundary_id):
         invalid or a required parameter is missing.
     """
     if request.method == "POST":
-        stations = models.Station.objects.filter(boundary_id=boundary_id)
-
-        if not stations.exists():
-            # Get stations data from API
-            station_response = train_stations(request, boundary_id)
-            stations_data = json.loads(station_response.content).get(
-                "stations", []
+        # Get stations data from API
+        station_response = get_station_data(request, boundary_id)
+        stations_data = json.loads(station_response.content).get(
+            "stations", []
+        )
+        # Save stations data in Station model
+        for station in stations_data:
+            name, osm_id, lat, lon = station
+            location = models.Location.objects.create(
+                latitude=float(lat), longitude=float(lon)
             )
-
-            # Save stations data in Station model
-            for station in stations_data:
-                name, osm_id, lat, lon = station
-                location = models.Location.objects.create(
-                    latitude=float(lat), longitude=float(lon)
-                )
-                boundary = models.MapBoundary.objects.get(pk=boundary_id)
-
-                models.Station.objects.create(
-                    boundary=boundary,
-                    location=location,
-                    name=name,
-                    osm_id=int(osm_id),
-                )
-
-            stations = models.Station.objects.filter(boundary_id=boundary_id)
-
-        # Serialize stations data
-        stations_data = [
-            {
-                "name": station.name,
-                "osm_id": station.osm_id,
-                "location": {
-                    "latitude": station.location.latitude,
-                    "longitude": station.location.longitude,
-                },
-            }
-            for station in stations
-        ]
-
+            boundary = models.MapBoundary.objects.get(pk=boundary_id)
+            models.Station.objects.create(
+                boundary=boundary,
+                location=location,
+                name=name,
+                osm_id=int(osm_id),
+            )
+        stations_data = serialise_stations_data(boundary_id)
         return JsonResponse({"stations": stations_data})
+    else:
+        return JsonResponse(
+            {"error": "Invalid request method or missing parameter."}
+        )
 
+
+def serialise_stations_data(boundary_id):
+    stations = models.Station.objects.filter(boundary_id=boundary_id)
+    stations_data = [
+        {
+            "name": station.name,
+            "osm_id": station.osm_id,
+            "location": {
+                "latitude": station.location.latitude,
+                "longitude": station.location.longitude,
+            },
+        }
+        for station in stations
+    ]
+    return stations_data
+
+
+@csrf_exempt
+def remove_stations(request, boundary_id):
+    if request.method == "POST":
+        models.Station.objects.filter(boundary_id=boundary_id).delete()
+        stations_data = serialise_stations_data(boundary_id)
+        return JsonResponse({"stations": stations_data})
+    else:
+        return JsonResponse(
+            {"error": "Invalid request method or missing parameter."}
+        )
+
+
+@csrf_exempt
+def download_stations_data(request, boundary_id):
+    return fetch_and_save_stations(request, boundary_id)
+
+
+@csrf_exempt
+def stations_data_exists(request, boundary_id):
+    if request.method == "POST":
+        stations_data = serialise_stations_data(boundary_id)
+        return JsonResponse({"stations": stations_data})
     else:
         return JsonResponse(
             {"error": "Invalid request method or missing parameter."}
