@@ -7,8 +7,19 @@ from rest_framework.views import APIView
 
 from publictransit import models
 from publictransit.overpass_api import OverpassClient, get_boundary_check_query
+from publictransit.utilities.boundary_tools import (
+    build_polygon,
+    get_boundary_coordinates
+
+)
+from publictransit.utilities.polygon_tools import (
+    simplify_points,
+    to_latlon,
+    to_utm,
+)
 
 from .serializers import (
+    BoundaryPointSerializer,
     CheckBoundarySerializer,
     MapBoundarySerializer,
     StationSerializer,
@@ -67,11 +78,28 @@ class StationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         boundary_id = self.request.query_params.get("boundary_id", None)
         if boundary_id is not None:
-            queryset = models.Station.objects.filter(boundary_id=boundary_id)
+            queryset = models.Station.objects.filter(
+                boundary_id=boundary_id
+            ).order_by("name")
         else:
             # Return an empty queryset if no boundary_id is provided
             queryset = models.Station.objects.none()
         return queryset
+
+    @action(detail=False, methods=["post"])
+    def download_data(self, request):
+        boundary_id = request.query_params.get("boundary_id", None)
+        if boundary_id:
+            self.fetch_and_save_stations(boundary_id)
+            self.fetch_and_save_nearby_stations(boundary_id)
+            queryset = self.get_queryset().filter(boundary_id=boundary_id)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({"stations": serializer.data})
+        else:
+            return Response(
+                {"error": "boundary_id is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(detail=False, methods=["post"])
     def remove_data(self, request):
@@ -88,43 +116,63 @@ class StationViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=["post"])
-    def download_data(self, request):
+    def remove_irrelevant_stations(self, request):
         boundary_id = request.query_params.get("boundary_id", None)
         if boundary_id:
-            self.fetch_and_save_stations(request, boundary_id)
-            queryset = self.get_queryset().filter(boundary_id=boundary_id)
-            serializer = self.get_serializer(queryset, many=True)
-            return Response({"stations": serializer.data})
-        else:
-            return Response(
-                {"error": "boundary_id is missing"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            pass
 
     @staticmethod
-    def fetch_and_save_stations(request, boundary_id):
+    def fetch_and_save_stations(boundary_id):
         """Download station data from API and save it to the database."""
-        if request.method == "POST":
-            # Get stations data from API
-            boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
-            client = OverpassClient()
-            response = client.get(boundary.stations_list_query)
+        # Get stations data from API
+        boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
+        client = OverpassClient()
+        response = client.get(boundary.stations_list_query)
 
-            # Sort each list (excluding header) by name in ascending order
-            sorted_stations = sorted(response[1:], key=lambda x: x[0])
-
-            # Save stations data in Station model
-            for station in sorted_stations:
-                name, osm_id, lat, lon = station
-                location = models.Location.objects.create(
-                    latitude=float(lat), longitude=float(lon)
-                )
-                boundary = models.MapBoundary.objects.get(pk=boundary_id)
+        # Save stations data in Station model
+        for station in response[1:]:
+            name, osm_id, lat, lon = station
+            location, _ = models.Location.objects.get_or_create(
+                latitude=float(lat), longitude=float(lon)
+            )
+            boundary = models.MapBoundary.objects.get(pk=boundary_id)
+            qs = models.Station.objects.filter(
+                boundary=boundary, osm_id=int(osm_id)
+            )
+            if not qs.exists():
                 models.Station.objects.create(
                     boundary=boundary,
                     location=location,
                     name=name,
                     osm_id=int(osm_id),
+                    isin_boundary=True,
+                )
+
+    @staticmethod
+    def fetch_and_save_nearby_stations(boundary_id):
+        """Download station data from API and save it to the database."""
+        # Get stations data from API
+        boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
+        client = OverpassClient()
+        response = client.get(boundary.stations_list_query_outside_boundary)
+
+        # Save stations data in Station model
+        for station in response[1:]:
+            name, osm_id, lat, lon = station
+            location, _ = models.Location.objects.get_or_create(
+                latitude=float(lat), longitude=float(lon)
+            )
+            boundary = models.MapBoundary.objects.get(pk=boundary_id)
+            qs = models.Station.objects.filter(
+                boundary=boundary, osm_id=int(osm_id)
+            )
+            if not qs.exists():
+                models.Station.objects.create(
+                    boundary=boundary,
+                    location=location,
+                    name=name,
+                    osm_id=int(osm_id),
+                    isin_boundary=False,
                 )
 
 
@@ -182,3 +230,102 @@ class StationsMapView(APIView):
         boundary_id = request.query_params.get("boundary_id", None)
         boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
         return render(request, "stations_map.html", {"boundary": boundary})
+
+
+class BoundaryPointViewSet(viewsets.ModelViewSet):
+    queryset = models.BoundaryPoint.objects.all()
+    serializer_class = BoundaryPointSerializer
+
+    def get_queryset(self):
+        boundary_id = self.request.query_params.get("boundary_id", None)
+        if boundary_id is not None:
+            queryset = models.BoundaryPoint.objects.filter(
+                boundary_id=boundary_id
+            ).order_by("order")
+        else:
+            # Return an empty queryset if no boundary_id is provided
+            queryset = models.BoundaryPoint.objects.none()
+        return queryset
+
+    @action(detail=False, methods=["get"])
+    def count(self, request):
+        boundary_id = request.query_params.get("boundary_id", None)
+        if boundary_id:
+            num_nodes = (
+                self.get_queryset().filter(boundary_id=boundary_id).count()
+            )
+            return Response({"num_nodes": num_nodes})
+        else:
+            return Response(
+                {"error": "boundary_id is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @action(detail=False, methods=["post"])
+    def download_data(self, request):
+        boundary_id = request.query_params.get("boundary_id", None)
+        if boundary_id:
+            self.fetch_and_save_polygon(boundary_id)
+            num_nodes = (
+                self.get_queryset().filter(boundary_id=boundary_id).count()
+            )
+            return Response({"num_nodes": num_nodes})
+        else:
+            return Response(
+                {"error": "boundary_id is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @staticmethod
+    def fetch_and_save_polygon(boundary_id):
+        """Download polygon data from API and save it to the database."""
+        # Get stations data from API
+        boundary = get_object_or_404(models.MapBoundary, pk=boundary_id)
+        client = OverpassClient()
+        response = client.get(boundary.polygon_query)
+
+        # Convert response coordinates into a continuous polygon
+        boundary_coordinates = get_boundary_coordinates(response)
+        polygon = build_polygon(boundary_coordinates)
+        print(f"Num coordinates: {len(polygon)}")
+
+        # Convert the geographic coordinates to UTM coordinates
+        utm_points = to_utm(polygon)
+
+        simplified_polygon = simplify_points(utm_points, epsilon=1)
+
+        # Convert the simplified UTM coordinates back to geographic coordinates
+        simplified_points = to_latlon(simplified_polygon)
+        print(f"Num simplified coordinates: {len(simplified_points)}")
+
+        # Remove all existing points for the given boundary
+        existing_qs = models.BoundaryPoint.objects.filter(boundary=boundary)
+        existing_qs.delete()
+        for i, (lat, lon) in enumerate(simplified_points):
+            # Create a new Location object and save it
+            location, _ = models.Location.objects.get_or_create(
+                latitude=lat, longitude=lon
+            )
+            location.save()
+
+            # Create a new BoundaryPoint object and save it
+            boundary_point = models.BoundaryPoint(
+                boundary=boundary, location=location, order=i
+            )
+            boundary_point.save()
+
+    @action(detail=False, methods=["post"])
+    def remove_data(self, request):
+        boundary_id = request.query_params.get("boundary_id", None)
+        if boundary_id:
+            queryset = self.get_queryset().filter(boundary_id=boundary_id)
+            queryset.delete()
+            num_nodes = (
+                self.get_queryset().filter(boundary_id=boundary_id).count()
+            )
+            return Response({"num_nodes": num_nodes})
+        else:
+            return Response(
+                {"error": "boundary_id is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

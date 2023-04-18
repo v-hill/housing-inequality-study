@@ -20,3 +20,4 @@ dependencies:
     - Django==4.1.7
     - djangorestframework==3.14.0
     - fake-useragent==1.1.1
+    - pyproj==3.5.0

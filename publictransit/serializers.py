@@ -36,3 +36,9 @@ class CheckBoundarySerializer(serializers.Serializer):
         choices=[("Ref GSS", "Ref GSS"), ("ISO 3166-2", "ISO 3166-2")]
     )
     area_value = serializers.CharField()
+
+
+class BoundaryPointSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.BoundaryPoint
+        fields = "__all__"

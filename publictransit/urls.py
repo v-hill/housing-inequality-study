@@ -5,6 +5,7 @@ from . import views
 
 app_name = "publictransit"
 router = routers.DefaultRouter()
+router.register(r"polygon", views.BoundaryPointViewSet)
 router.register(r"map_boundaries", views.MapBoundaryViewSet)
 router.register(r"stations", views.StationViewSet)
 

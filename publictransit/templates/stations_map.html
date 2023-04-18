@@ -16,8 +16,13 @@
 <div class="col-main-content">
     <h1>{{ boundary.name }}</h1>
     <h2>Railway stations</h2>
+    <div>
+        <label>Show stations outside the boundary:</label>
+        <input type="checkbox" id="show-boundary-stations-toggle">
+
+    </div>
     <button id="back-to-index" class="btn btn-success"
-    onclick="window.location.href='/publictransit/boundary?boundary_id={{ boundary.id }}'">Back to Details</button>
+        onclick="window.location.href='/publictransit/boundary?boundary_id={{ boundary.id }}'">Back to Details</button>
 </div>
 
 <div id="map"></div>
